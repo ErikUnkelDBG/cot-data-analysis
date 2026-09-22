@@ -336,18 +336,19 @@ def main():
     forecast_df = calculate_garch_forecast(
         combined_df, y_column="Net Leverage", forecast_horizon=26
     )  # 26 Weeks ~ 6 Months
-    forecast_df.to_parquet(data_dir / "forecast_data.parquet", index=False)
 
+    # Combine the original data with the forecast data
+    final_df = pd.concat([combined_df, forecast_df], ignore_index=True)
 
     # 4. Save as Parquet for Power BI
-    combined_df.to_parquet(data_dir / "historical_data.parquet", index=False)
+    final_df.to_parquet(data_dir / "historical_data.parquet", index=False)
     differences_df.to_parquet(data_dir / "differences_data.parquet", index=False)
     hp_filter_df.to_parquet(data_dir / "hp_filter_data.parquet", index=False)
 
 
 
     print(
-        f"Successfully finished! Updated 4 Parquet files in:\n{data_dir}"
+        f"Successfully finished! Updated 3 Parquet files in:\n{data_dir}"
     )
 
 
