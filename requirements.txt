@@ -1,0 +1,5 @@
+pandas
+requests
+statsmodels
+pyarrow
+openpyxl
