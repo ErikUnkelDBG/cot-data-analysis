@@ -3,7 +3,7 @@ import pandas as pd
 
 base_dir = Path(__file__).resolve().parent
 
-# 1. Historical Data prüfen
+# 1. Check historical Data
 df_hist = pd.read_parquet(base_dir / "historical_data.parquet")
 print("=== HISTORICAL DATA ===")
 print("Zeilen & Spalten:", df_hist.shape)
@@ -24,7 +24,7 @@ print(
     ]
 )
 
-# 2. HP Filter prüfen
+# 2. Check HP Filter
 df_hp = pd.read_parquet(base_dir / "hp_filter_data.parquet")
 print("\n=== HP FILTER DATA ===")
 print("Zeilen:", len(df_hp))

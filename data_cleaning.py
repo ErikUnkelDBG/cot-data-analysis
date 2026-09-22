@@ -8,7 +8,7 @@ import requests
 import statsmodels.api as sm
 
 # ==========================================
-# KONFIGURATION & MAPPINGS
+# CONFIG & MAPPINGS
 # ==========================================
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -42,7 +42,7 @@ HP_VARIABLES = [
 
 
 # ==========================================
-# 1. BEREINIGUNG & DOWNLOADS
+# 1. CLEANING & DOWNLOADS
 # ==========================================
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Bereinigt Spaltennamen, filtert Märkte und berechnet Basiskennzahlen."""
@@ -123,20 +123,20 @@ def build_full_history_2006_to_past_year(
     )
     all_dfs = []
 
-    # 1. 2006-2016 Backfill-Archiv laden (nur bis 2010-07-20 verwenden)
+    # 1. 2006-2016 load Backfill archive (only use up to 2010-07-20)
     url_0616 = "https://www.cftc.gov/files/dea/history/fin_com_txt_2006_2016.zip"
     df_0616 = download_cftc_zip(url_0616, "2006-2016 Backfill")
     if not df_0616.empty:
         df_0616 = df_0616[df_0616["Date"] < pd.to_datetime("2010-07-20")].copy()
         all_dfs.append(df_0616)
 
-    # 2. Jahr 2010 ab 20. Juli
+    # 2. Year 2010 from July 20
     url_2010 = "https://www.cftc.gov/files/dea/history/com_fin_txt_2010.zip"
     df_2010 = download_cftc_zip(url_2010, "Jahr 2010")
     if not df_2010.empty:
         all_dfs.append(df_2010)
 
-    # 3. Alle Folgejahre bis Vorjahr (2011 bis current_year - 1)
+    # 3. All subsequent years up to the previous year (2011 to current_year - 1)
     for y in range(2011, current_year):
         url_year = f"https://www.cftc.gov/files/dea/history/com_fin_txt_{y}.zip"
         df_year = download_cftc_zip(url_year, f"Jahr {y}")
@@ -159,7 +159,7 @@ def build_full_history_2006_to_past_year(
 
 
 # ==========================================
-# 2. STATISTIK: DIFFERENZEN & HP-FILTER
+# 2. STATISTICS: DIFFERENCES & HP-FILTER
 # ==========================================
 def make_percent_difference(historical_df: pd.DataFrame) -> pd.DataFrame:
     differences = historical_df[["Date", "Market Name"]].copy()
@@ -222,22 +222,22 @@ def make_hp_filtering(
 
 
 # ==========================================
-# 3. HAUPTABLAUF (MAIN)
+# 3. MAIN PROCESS
 # ==========================================
 def main():
     base_dir = Path(__file__).resolve().parent
     current_year = datetime.datetime.now().year
 
-    # 1. Historie von 2006 bis Vorjahr laden (beim 1. Mal Web-Download, danach aus Cache)
+    # 1. Load history from 2006 to the previous year (first time via web download, afterwards from cache)
     historical_df = build_full_history_2006_to_past_year(base_dir, current_year)
 
-    # 2. Aktuelles Jahr immer frisch von der CFTC herunterladen
+    # 2. Always download the current year fresh from the CFTC
     url_current = (
         f"https://www.cftc.gov/files/dea/history/com_fin_txt_{current_year}.zip"
     )
     current_df = download_cftc_zip(url_current, f"Aktuelles Jahr {current_year}")
 
-    # Zusammenführen
+    # Merge
     combined_df = pd.concat([historical_df, current_df], ignore_index=True)
     combined_df.drop_duplicates(
         subset=["Date", "Market Name"], keep="last", inplace=True
@@ -252,12 +252,12 @@ def main():
         f"{combined_df['Date'].min().strftime('%Y-%m-%d')} bis {combined_df['Date'].max().strftime('%Y-%m-%d')}."
     )
 
-    # 3. Differenzen & HP-Filter über die gesamte 20-Jahres-Historie berechnen
+    # 3. Calculate differences & HP filter over the entire 20-year history
     print("Berechne Veränderungen und HP-Filter über 20 Jahre Historie...")
     differences_df = make_percent_difference(combined_df)
     hp_filter_df = make_hp_filtering(combined_df, HP_VARIABLES, lamb=270400)
 
-    # 4. Als Parquet für Power BI speichern
+    # 4. Save as Parquet for Power BI
     combined_df.to_parquet(base_dir / "historical_data.parquet", index=False)
     differences_df.to_parquet(base_dir / "differences_data.parquet", index=False)
     hp_filter_df.to_parquet(base_dir / "hp_filter_data.parquet", index=False)
