@@ -9,6 +9,9 @@ on:
   # Ermöglicht es, den Workflow jederzeit manuell in GitHub per Klick zu testen:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-pipeline:
     # Je nach DBG-Setup: 'ubuntu-latest' oder euer interner Runner-Tag (z. B. 'self-hosted')
