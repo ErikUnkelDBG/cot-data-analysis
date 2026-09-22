@@ -6,6 +6,8 @@ import zipfile
 import pandas as pd
 import requests
 import statsmodels.api as sm
+import numpy as np
+from arch import arch_model
 
 # ==========================================
 # CONFIG & MAPPINGS
@@ -221,6 +223,76 @@ def make_hp_filtering(
     return pd.DataFrame()
 
 
+def calculate_garch_forecast(
+    historical_df: pd.DataFrame,
+    y_column: str = "Net Leverage",
+    forecast_horizon: int = 120,
+) -> pd.DataFrame:
+    """Calculates an AR(1)-GARCH(1,1) forecast including 95% confidence intervals per market."""
+    forecast_records = []
+
+    for market in historical_df["Market Name"].unique():
+        subset = (
+            historical_df[historical_df["Market Name"] == market]
+            .set_index("Date")[[y_column]]
+            .sort_index()
+            .asfreq("W-TUE")  # CFTC-Data is weekly on Tuesdays
+            .interpolate()
+        )
+
+        series = subset[y_column].dropna()
+        if len(series) < 50:
+            continue
+
+        try:
+            garch = arch_model(
+                series,
+                mean="AR",
+                lags=1,
+                vol="GARCH",
+                p=1,
+                q=1,
+                dist="normal",
+                rescale=True,
+            )
+            fit = garch.fit(disp="off")
+
+            fcast = fit.forecast(horizon=forecast_horizon, reindex=False)
+            mean_forecast = fcast.mean.iloc[-1].values
+            var_forecast = fcast.variance.iloc[-1].values
+            vol_forecast = np.sqrt(var_forecast)
+
+            if fit.scale != 1.0:
+                mean_forecast = mean_forecast / fit.scale
+                vol_forecast = vol_forecast / fit.scale
+
+            # Generate forecast data points (weekly)
+            forecast_dates = pd.date_range(
+                start=series.index[-1] + pd.Timedelta(weeks=1),
+                periods=forecast_horizon,
+                freq="W-TUE",
+            )
+
+            df_forecast = pd.DataFrame(
+                {
+                    "Date": forecast_dates,
+                    "Market Name": market,
+                    "Variable": y_column,
+                    "Forecast Mean": mean_forecast,
+                    "Upper Bound": mean_forecast + 1.96 * vol_forecast,
+                    "Lower Bound": mean_forecast - 1.96 * vol_forecast,
+                }
+            )
+            forecast_records.append(df_forecast)
+        except Exception as e:
+            print(f"Fehler bei GARCH für {market}: {e}")
+
+    if forecast_records:
+        return pd.concat(forecast_records, ignore_index=True)
+    return pd.DataFrame()
+
+
+
 # ==========================================
 # 3. MAIN PROCESS
 # ==========================================
@@ -259,13 +331,23 @@ def main():
     differences_df = make_percent_difference(combined_df)
     hp_filter_df = make_hp_filtering(combined_df, HP_VARIABLES, lamb=270400)
 
+    # Calculate & save GARCH forecast
+    print("Calculating GARCH forecasts...")
+    forecast_df = calculate_garch_forecast(
+        combined_df, y_column="Net Leverage", forecast_horizon=26
+    )  # 26 Weeks ~ 6 Months
+    forecast_df.to_parquet(data_dir / "forecast_data.parquet", index=False)
+
+
     # 4. Save as Parquet for Power BI
     combined_df.to_parquet(data_dir / "historical_data.parquet", index=False)
     differences_df.to_parquet(data_dir / "differences_data.parquet", index=False)
     hp_filter_df.to_parquet(data_dir / "hp_filter_data.parquet", index=False)
 
+
+
     print(
-        f"\Successfully finished! Updated 3 Parquet files in:\n{data_dir}"
+        f"Successfully finished! Updated 4 Parquet files in:\n{data_dir}"
     )
 
 

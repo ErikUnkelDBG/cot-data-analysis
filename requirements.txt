@@ -3,3 +3,4 @@ requests
 statsmodels
 pyarrow
 openpyxl
+arch
