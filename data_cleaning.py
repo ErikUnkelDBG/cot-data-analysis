@@ -45,7 +45,7 @@ HP_VARIABLES = [
 # 1. CLEANING & DOWNLOADS
 # ==========================================
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Bereinigt Spaltennamen, filtert Märkte und berechnet Basiskennzahlen."""
+    """Cleans column names, filters markets, and calculates basic metrics."""
     df.columns = df.columns.str.strip()
 
     available_cols = [c for c in COLS_TO_USE if c in df.columns]
@@ -90,7 +90,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def download_cftc_zip(url: str, label: str) -> pd.DataFrame:
-    """Lädt ein beliebiges CFTC-ZIP-Archiv herunter und bereinigt die Textdatei."""
+    """Downloads any CFTC ZIP archive and cleans the text file."""
     print(f"Lade {label}: {url}")
     try:
         response = requests.get(url, headers=HEADERS, timeout=60)
@@ -111,7 +111,7 @@ def download_cftc_zip(url: str, label: str) -> pd.DataFrame:
 def build_full_history_2006_to_past_year(
     base_dir: Path, current_year: int
 ) -> pd.DataFrame:
-    """Lädt einmalig die gesamte Historie von 2006 bis Vorjahr und speichert sie lokal."""
+    """Loads the entire history from 2006 to the previous year once and saves it locally."""
     cache_file = base_dir / f"history_2006_{current_year - 1}.parquet"
 
     if cache_file.exists():
@@ -119,7 +119,7 @@ def build_full_history_2006_to_past_year(
         return pd.read_parquet(cache_file)
 
     print(
-        f"Erstelle vollständige Historie 2006–{current_year - 1} frisch aus dem Web..."
+        f"Creating full history 2006–{current_year - 1} fresh from the web..."
     )
     all_dfs = []
 
@@ -154,7 +154,7 @@ def build_full_history_2006_to_past_year(
         by=["Market Name", "Date"], ascending=[True, True], inplace=True
     )
     full_hist.to_parquet(cache_file, index=False)
-    print(f"Historie 2006–{current_year - 1} erfolgreich lokal gespeichert.")
+    print(f"History 2006–{current_year - 1} successfully saved locally.")
     return full_hist
 
 
@@ -237,7 +237,7 @@ def main():
     url_current = (
         f"https://www.cftc.gov/files/dea/history/com_fin_txt_{current_year}.zip"
     )
-    current_df = download_cftc_zip(url_current, f"Aktuelles Jahr {current_year}")
+    current_df = download_cftc_zip(url_current, f"Current Year {current_year}")
 
     # Merge
     combined_df = pd.concat([historical_df, current_df], ignore_index=True)
@@ -250,7 +250,7 @@ def main():
     combined_df.reset_index(drop=True, inplace=True)
 
     print(
-        f"Gesamtdatensatz bereit: {len(combined_df)} Zeilen von "
+        f"Total dataset ready: {len(combined_df)} rows from "
         f"{combined_df['Date'].min().strftime('%Y-%m-%d')} bis {combined_df['Date'].max().strftime('%Y-%m-%d')}."
     )
 
@@ -265,7 +265,7 @@ def main():
     hp_filter_df.to_parquet(data_dir / "hp_filter_data.parquet", index=False)
 
     print(
-        f"\nErfolgreich abgeschlossen! 3 Parquet-Dateien aktualisiert in:\n{data_dir}"
+        f"\Successfully finished! Updated 3 Parquet files in:\n{data_dir}"
     )
 
 
