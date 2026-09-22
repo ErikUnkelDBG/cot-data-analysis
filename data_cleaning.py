@@ -226,10 +226,12 @@ def make_hp_filtering(
 # ==========================================
 def main():
     base_dir = Path(__file__).resolve().parent
+    data_dir = base_dir / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     current_year = datetime.datetime.now().year
 
     # 1. Load history from 2006 to the previous year (first time via web download, afterwards from cache)
-    historical_df = build_full_history_2006_to_past_year(base_dir, current_year)
+    historical_df = build_full_history_2006_to_past_year(data_dir, current_year)
 
     # 2. Always download the current year fresh from the CFTC
     url_current = (
@@ -258,12 +260,12 @@ def main():
     hp_filter_df = make_hp_filtering(combined_df, HP_VARIABLES, lamb=270400)
 
     # 4. Save as Parquet for Power BI
-    combined_df.to_parquet(base_dir / "historical_data.parquet", index=False)
-    differences_df.to_parquet(base_dir / "differences_data.parquet", index=False)
-    hp_filter_df.to_parquet(base_dir / "hp_filter_data.parquet", index=False)
+    combined_df.to_parquet(data_dir / "historical_data.parquet", index=False)
+    differences_df.to_parquet(data_dir / "differences_data.parquet", index=False)
+    hp_filter_df.to_parquet(data_dir / "hp_filter_data.parquet", index=False)
 
     print(
-        f"\nErfolgreich abgeschlossen! 3 Parquet-Dateien aktualisiert in:\n{base_dir}"
+        f"\nErfolgreich abgeschlossen! 3 Parquet-Dateien aktualisiert in:\n{data_dir}"
     )
 
 
