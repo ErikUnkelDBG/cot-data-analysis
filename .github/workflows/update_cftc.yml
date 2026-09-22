@@ -2,38 +2,41 @@ name: Weekly CFTC Data Update
 
 on:
   schedule:
-    # Jeden Freitag um 22:30 Uhr UTC (ca. 23:30 / 00:30 Uhr Frankfurt)
-    # Die CFTC veröffentlicht um 15:30 US Eastern Time (~21:30 deutscher Zeit)
+    # Every Friday at 22:30 UTC (approx. 23:30 / 00:30 Frankfurt time)
+    # The CFTC releases data at 15:30 US Eastern Time (~21:30 German time)
     - cron: '30 22 * * 5'
   
-  # Ermöglicht es, den Workflow jederzeit manuell in GitHub per Klick zu testen:
+  # Allow manual triggering of the workflow in GitHub via the "Run workflow" button:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   run-pipeline:
-    # Je nach DBG-Setup: 'ubuntu-latest' oder euer interner Runner-Tag (z. B. 'self-hosted')
+    
     runs-on: ubuntu-latest
 
     steps:
-      - name: Repository auschecken
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Python 3.11 einrichten
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Abhängigkeiten installieren
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Pipeline ausführen
+      - name: Run pipeline
         run: |
           python data_cleaning.py
 
-      - name: Aktualisierte Parquet-Dateien committen & pushen
+      - name: Commit & push updated Parquet files
         run: |
           git config --global user.name "CFTC Automation Bot"
           git config --global user.email "actions@github.deutsche-boerse.com"
