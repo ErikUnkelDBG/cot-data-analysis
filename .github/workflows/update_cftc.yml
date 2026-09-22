@@ -41,5 +41,5 @@ jobs:
           git config --global user.name "CFTC Automation Bot"
           git config --global user.email "actions@github.deutsche-boerse.com"
           git add data/*.parquet
-          # Nur committen, wenn sich die Parquet-Dateien tatsächlich geändert haben:
+          # Only commit if the Parquet files have actually changed:
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-Update: CFTC Daten per $(date +'%Y-%m-%d')" && git push)
